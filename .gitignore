@@ -51,7 +51,6 @@ coverage.xml
 *.pot
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -97,6 +96,4 @@ Thumbs.db
 *.key
 .env.local
 .env.*.local
-.env.development
-.env.production
 secrets.json
