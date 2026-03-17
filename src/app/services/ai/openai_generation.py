@@ -53,3 +53,52 @@ class OpenAILLMService(BaseLLMService):
         }
         
         return answer, token_info
+    
+    @retry_on_openai_errors
+    def generate_chat(self, query: str, context: str = "", system_prompt: str = None) -> Tuple[str, dict]:
+        """
+        순수 LLM 대화 (RAG 아님)
+        
+        - 문서 기반 제약 없음
+        - 일반적인 AI 어시스턴트로 동작
+        - 커스텀 시스템 프롬프트 지원
+        
+        Returns:
+            (답변 텍스트, 토큰 정보)
+        """
+        safe_context = truncate_text(context, self.max_context_tokens) if context else ""
+        
+        # 기본 시스템 프롬프트 (RAG 제약 없음)
+        default_system_prompt = """
+        당신은 친절하고 전문적인 AI 어시스턴트입니다.
+        사용자의 질문에 정확하고 도움이 되는 답변을 제공하세요.
+        모르는 내용은 솔직하게 모른다고 말하고, 필요시 추가 정보를 요청하세요.
+        """
+        
+        final_system_prompt = system_prompt if system_prompt else default_system_prompt
+        
+        # 대화 컨텍스트가 있으면 메시지에 포함
+        messages = [
+            {"role": "system", "content": final_system_prompt}
+        ]
+        
+        if safe_context:
+            messages.append({"role": "user", "content": f"{safe_context}\n\n[질문]\n{query}"})
+        else:
+            messages.append({"role": "user", "content": query})
+        
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.7  # 일반 대화는 좀 더 창의적으로
+        )
+        
+        answer = response.choices[0].message.content
+        
+        token_info = {
+            "total_tokens": response.usage.total_tokens if response.usage else 0,
+            "input_tokens": response.usage.prompt_tokens if response.usage else 0,
+            "output_tokens": response.usage.completion_tokens if response.usage else 0
+        }
+        
+        return answer, token_info

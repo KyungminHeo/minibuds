@@ -6,11 +6,14 @@ OpenAI 플랫폼 전용 임베딩 서비스
 - 매 호출마다 새 클라이언트 생성
 - user 파라미터로 각 요청을 고유하게 만들어 SDK 내부 캐싱 방지
 """
+import logging
 from typing import List
 import hashlib
 from app.services.ai.base import BaseEmbeddingService
 from app.services.ai.client import get_openai_client, retry_on_openai_errors
 from app.services.ai.utils import num_tokens_from_string
+
+logger = logging.getLogger(__name__)
 
 class OpenAIEmbeddingService(BaseEmbeddingService):
     def __init__(self):
@@ -91,7 +94,7 @@ class OpenAIEmbeddingService(BaseEmbeddingService):
                 embeddings = self._send_batch(batch)
                 all_embeddings.extend(embeddings)
                 processed += len(batch)
-                print(f"[Embedding] Processed {processed}/{len(texts)} texts")
+                logger.info(f"Processed {processed}/{len(texts)} texts")
                 batch = []
                 batch_tokens = 0
             
@@ -103,6 +106,6 @@ class OpenAIEmbeddingService(BaseEmbeddingService):
             embeddings = self._send_batch(batch)
             all_embeddings.extend(embeddings)
             processed += len(batch)
-            print(f"[Embedding] Processed {processed}/{len(texts)} texts")
+            logger.info(f"Processed {processed}/{len(texts)} texts")
             
         return all_embeddings

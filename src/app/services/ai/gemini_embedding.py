@@ -7,9 +7,12 @@ OpenAI와 동일한 인터페이스 구현: 배치 처리, retry
 - contents를 구조화된 형식으로 전달
 - SEMANTIC_SIMILARITY로 한국어 의미 이해 개선
 """
+import logging
 from typing import List
 from app.services.ai.base import BaseEmbeddingService
 from app.services.ai.client import get_google_client, retry_on_google_errors
+
+logger = logging.getLogger(__name__)
 
 class GeminiEmbeddingService(BaseEmbeddingService):
     def __init__(self):
@@ -85,7 +88,7 @@ class GeminiEmbeddingService(BaseEmbeddingService):
             batch = texts[i:i + self.max_batch_size]
             embeddings = self._send_batch(batch)
             all_embeddings.extend(embeddings)
-            print(f"[Embedding] Processed {min(i + self.max_batch_size, len(texts))}/{len(texts)} texts")
+            logger.info(f"Processed {min(i + self.max_batch_size, len(texts))}/{len(texts)} texts")
         
         return all_embeddings
 

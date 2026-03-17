@@ -52,12 +52,12 @@ def get_user_stats(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "사용자를 찾을 수 없습니다.")
     
     total_cost = history_crud.get_user_total_cost(db, user_id)
-    chat_history = history_crud.get_user_chat_history(db, user_id, limit=1000)
+    total_queries = history_crud.get_user_total_query_count(db, user_id)
     
     return UserStats(
         user_id=user_id,
         total_cost_usd=total_cost,
-        total_queries=len(chat_history)
+        total_queries=total_queries
     )
 
 @router.patch("/users/{user_id}/platform")

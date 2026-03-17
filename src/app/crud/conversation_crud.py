@@ -65,3 +65,33 @@ def get_conversation_message_count(db: Session, conversation_id: int) -> int:
     return db.query(func.count(ChatHistory.id)).filter(
         ChatHistory.conversation_id == conversation_id
     ).scalar() or 0
+
+def list_user_conversations_with_counts(db: Session, user_id: int, skip: int = 0, limit: int = 50):
+    """
+    사용자의 대화 세션 목록 + 메시지 수를 한 번의 쿼리로 조회 (N+1 방지)
+    
+    Returns:
+        List[Tuple[Conversation, int]]: [(conversation, message_count), ...]
+    """
+    # 서브쿼리: 대화별 메시지 수
+    msg_count_subquery = (
+        db.query(
+            ChatHistory.conversation_id,
+            func.count(ChatHistory.id).label("msg_count")
+        )
+        .group_by(ChatHistory.conversation_id)
+        .subquery()
+    )
+    
+    # 메인 쿼리: Conversation LEFT JOIN 메시지 수
+    results = (
+        db.query(Conversation, func.coalesce(msg_count_subquery.c.msg_count, 0))
+        .outerjoin(msg_count_subquery, Conversation.id == msg_count_subquery.c.conversation_id)
+        .filter(Conversation.user_id == user_id)
+        .order_by(desc(Conversation.updated_at))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    
+    return results

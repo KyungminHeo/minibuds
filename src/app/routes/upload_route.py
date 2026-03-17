@@ -1,5 +1,8 @@
 import os
+import logging
 import asyncio
+
+logger = logging.getLogger(__name__)
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
@@ -52,7 +55,10 @@ async def upload_pdf(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(400, "PDF 파일만 가능합니다.")
 
-    # 2. 파일 저장 (run_in_executor로 비블로킹)
+    # 2. 파일 크기 검증
+    file_service.validate_file_size(file)
+
+    # 3. 파일 저장 (run_in_executor로 비블로킹)
     saved_path = await loop.run_in_executor(db_executor, lambda: file_service.save_file_locally(file))
 
     with upload_transaction(db, saved_path):
@@ -184,7 +190,7 @@ def delete_document(
             os.remove(file_path)
     except Exception as e:
         # 파일 삭제 실패해도 DB는 이미 삭제됨 (로그만 남김)
-        print(f"Warning: Failed to delete physical file {file_path}: {e}")
+        logger.warning(f"Failed to delete physical file {file_path}: {e}")
     
     return {
         "message": "문서가 성공적으로 삭제되었습니다.",

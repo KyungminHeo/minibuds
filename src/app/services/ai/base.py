@@ -35,3 +35,16 @@ class BaseLLMService(ABC):
             }
         """
         pass
+    
+    @abstractmethod
+    def generate_chat(self, query: str, context: str = "", system_prompt: str = None) -> Tuple[str, dict]:
+        """
+        순수 LLM 대화 (RAG 검색 없음)
+        
+        - 문서 기반 제약 없이 일반적인 AI 어시스턴트로 동작
+        - 커스텀 시스템 프롬프트 지원
+        
+        Returns:
+            (답변 텍스트, 토큰 정보 딕셔너리)
+        """
+        pass

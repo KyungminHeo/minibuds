@@ -60,12 +60,10 @@ def list_user_conversations(user_id: int, skip: int = 0, limit: int = 50, db: Se
     if not user:
         raise HTTPException(404, "사용자를 찾을 수 없습니다.")
     
-    conversations = conversation_crud.list_user_conversations(db, user_id, skip, limit)
+    conversations_with_counts = conversation_crud.list_user_conversations_with_counts(db, user_id, skip, limit)
     
-    # 각 세션의 메시지 수를 포함
     result = []
-    for conv in conversations:
-        msg_count = conversation_crud.get_conversation_message_count(db, conv.id)
+    for conv, msg_count in conversations_with_counts:
         result.append(ConversationResponse(
             id=conv.id,
             user_id=conv.user_id,
@@ -108,19 +106,31 @@ def get_conversation_messages(conversation_id: int, skip: int = 0, limit: int = 
     )
 
 @router.patch("/conversations/{conversation_id}/title")
-def update_conversation_title(conversation_id: int, new_title: str, db: Session = Depends(get_db)):
-    """대화 세션 제목 수정"""
+def update_conversation_title(conversation_id: int, user_id: int, new_title: str, db: Session = Depends(get_db)):
+    """대화 세션 제목 수정 (권한 검증 포함)"""
+    conversation = conversation_crud.get_conversation(db, conversation_id)
+    if not conversation:
+        raise HTTPException(404, "대화 세션을 찾을 수 없습니다.")
+    if conversation.user_id != user_id:
+        raise HTTPException(403, "해당 대화 세션을 수정할 권한이 없습니다.")
+    
     try:
-        conversation = conversation_crud.update_conversation_title(db, conversation_id, new_title)
-        return {"message": f"제목이 '{conversation.title}'로 변경되었습니다."}
+        updated = conversation_crud.update_conversation_title(db, conversation_id, new_title)
+        return {"message": f"제목이 '{updated.title}'로 변경되었습니다."}
     except ValueError as e:
         raise HTTPException(404, str(e))
 
 @router.delete("/conversations/{conversation_id}")
-def delete_conversation(conversation_id: int, db: Session = Depends(get_db)):
-    """대화 세션 삭제 (메시지도 함께 삭제)"""
+def delete_conversation(conversation_id: int, user_id: int, db: Session = Depends(get_db)):
+    """대화 세션 삭제 (메시지도 함께 삭제, 권한 검증 포함)"""
+    conversation = conversation_crud.get_conversation(db, conversation_id)
+    if not conversation:
+        raise HTTPException(404, "대화 세션을 찾을 수 없습니다.")
+    if conversation.user_id != user_id:
+        raise HTTPException(403, "해당 대화 세션을 삭제할 권한이 없습니다.")
+    
     success = conversation_crud.delete_conversation(db, conversation_id)
     if not success:
-        raise HTTPException(404, "대화 세션을 찾을 수 없습니다.")
+        raise HTTPException(500, "대화 세션 삭제에 실패했습니다.")
     
     return {"message": "대화 세션이 삭제되었습니다."}

@@ -1,9 +1,12 @@
 """
 Document CRUD - 플랫폼별 Chunk 테이블 지원
 """
+import logging
 from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, text
+
+logger = logging.getLogger(__name__)
 from app.models.document import Document, OpenAIChunk, GeminiChunk
 from app.schemas.dtos import DocumentCreate
 
@@ -101,7 +104,7 @@ def create_chunks(db: Session, document_id: int, platform: str, chunks_data: Lis
         db.commit()  # 배치마다 커밋하여 연결 유지
         
         # 진행 상황 로깅 (디버깅용)
-        print(f"[Chunk] Saved {min(i + batch_size, total_chunks)}/{total_chunks} chunks")
+        logger.info(f"Saved {min(i + batch_size, total_chunks)}/{total_chunks} chunks")
 
 # ========================================
 # Hybrid Search Functions (Vector + Full-Text)
@@ -243,7 +246,7 @@ def search_similar_chunks_hybrid(
     except Exception as e:
         # Full-Text Search 실패 시 트랜잭션 롤백 후 Vector Search 결과만 사용
         db.rollback()  # 트랜잭션 롤백 - InFailedSqlTransaction 방지
-        print(f"Full-text search failed: {e}, falling back to vector-only search")
+        logger.warning(f"Full-text search failed: {e}, falling back to vector-only search")
         fulltext_results = []
     
     # RRF로 결과 병합

@@ -1,5 +1,8 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 from app.core.database import get_db
 from app.schemas.dtos import ChatRequest, ChatResponse, SearchResult
 from app.services.ai.factory import AIServiceFactory
@@ -66,15 +69,10 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         top_k=10
     )
     
-    # [DEBUG] 검색 결과 로깅
-    print(f"\n{'='*60}")
-    print(f"[DEBUG] 원본 질문: {request.question}")
-    print(f"[DEBUG] 재작성된 검색 쿼리: {search_query}")
-    print(f"[DEBUG] 검색 결과 수: {len(results)}")
-    for i, (chunk, score) in enumerate(results[:5]):  # 상위 5개만
-        print(f"\n[DEBUG] 청크 {i+1} (score={score:.4f}, doc_id={chunk.document_id}, page={chunk.page_number}):")
-        print(f"        {chunk.content[:150]}...")
-    print(f"{'='*60}\n")
+    # 검색 결과 로깅
+    logger.debug(f"원본 질문: {request.question}")
+    logger.debug(f"재작성된 검색 쿼리: {search_query}")
+    logger.debug(f"검색 결과 수: {len(results)}")
     
     # 7. 문서 Context 구성
     if not results:

@@ -50,3 +50,9 @@ def get_conversation_messages(db: Session, conversation_id: int, skip: int = 0, 
     return db.query(ChatHistory).filter(
         ChatHistory.conversation_id == conversation_id
     ).order_by(ChatHistory.created_at.asc()).offset(skip).limit(limit).all()
+
+def get_user_total_query_count(db: Session, user_id: int) -> int:
+    """사용자의 총 질의 수 조회 (COUNT 쿼리 - 효율적)"""
+    return db.query(func.count(ChatHistory.id)).filter(
+        ChatHistory.user_id == user_id
+    ).scalar() or 0
